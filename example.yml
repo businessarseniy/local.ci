@@ -1,0 +1,28 @@
+# Define running environment
+image: "alpine:latest"
+env:
+  KEY: VALUE
+
+# Before any execution (system setup)
+setup:
+  - echo SETUP STAGE
+
+# Project installs (requirements and other stuff,
+# ran under unprivilliged user)
+install:
+  - echo INSTALL STAGE
+
+# Actual test scripts
+test:
+  - echo TEST STAGE
+
+# Deploy the application
+deploy:
+  provider: localhost
+  secret:
+    KEY: VALUE
+  branch: master
+
+# Notify codeowners for results
+notify:
+  email: ...
