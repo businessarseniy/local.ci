@@ -1,0 +1,30 @@
+# Define running environment
+image: "python:3.12-slim"
+env:
+  KEY: VALUE
+
+# Before any execution (system setup)
+setup:
+  - apt-get update
+  - apt install -y make
+
+# Project installs (requirements and other stuff,
+# ran under unprivilliged user)
+install:
+  - make
+  - make install
+
+# Actual test scripts
+test:
+  - python3 main.py
+
+# Deploy the application
+deploy:
+  provider: localhost
+  secret:
+    KEY: VALUE
+  branch: master
+
+# Notify codeowners for results
+notify:
+  email: ...
