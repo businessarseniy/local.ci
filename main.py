@@ -5,9 +5,10 @@
 import yaml
 import subprocess
 import uuid
-import os
 import logging
 import sys
+
+from backend import BaseBackend, DockerBackend
 
 
 logging.basicConfig(level=logging.INFO)
@@ -58,10 +59,12 @@ class Runner:
     class _Id(str):...
 
     config: Config
+    backend: BaseBackend
     identifier: _Id
 
-    def __init__(self: "Runner", config: Config):
+    def __init__(self: "Runner", config: Config, backend: BaseBackend):
         self.config = config
+        self.backend = backend
     
     def __enter__(self: "Runner"):
         self.bootstrap()
@@ -80,36 +83,36 @@ class Runner:
     def bootstrap(self: "Runner"):
         # Setup a VM or Docker image defined in config
         # NOTE: superuser
-        self.identifier = f"ci_runner_{uuid.uuid4().hex}"
+        identifier = f"ci_runner_{uuid.uuid4().hex}"
         image = self.config.image
-        pwd = os.getcwd()
-        args = ["docker", "run", "-dit", "-v", f"{pwd}:/workspace", "-w", "/workspace", "--name", self.identifier]
-        for key in self.config.env:
-            args.append("-e")
-            args.append("{}={}".format(key, self.config.env.get(key)))
-        args.append(image)
+        env = self.config.env
+        args = self.backend.bootstrapArgs(image, env, identifier)
         r = subprocess.run(args)
+        self.identifier = identifier
         log.debug(f"Starting docker container with {r.args} -> {r.returncode}")
     
     def setup(self: "Runner"):
         # Run setup scripts inside created instance
         # NOTE: superuser
         for cmd in self.config.setup:
-            r = subprocess.run(["docker", "exec", self.identifier, *cmd.split(" ")])
+            args = self.backend.execArgs(self.identifier, cmd.split(" "))
+            r = subprocess.run(args)
             log.info(f"\"{cmd}\" -> {r.returncode}")
 
     def install(self: "Runner"):
         # Run project related requirements
         # NOTE: regular user
         for cmd in self.config.install:
-            r = subprocess.run(["docker", "exec", self.identifier, *cmd.split(" ")])
+            args = self.backend.execArgs(self.identifier, cmd.split(" "))
+            r = subprocess.run(args)
             log.info(f"\"{cmd}\" -> {r.returncode}")
 
     def test(self: "Runner"):
         # Run test scriplets
         # NOTE: regular user
         for cmd in self.config.test:
-            r = subprocess.run(["docker", "exec", self.identifier, *cmd.split(" ")])
+            args = self.backend.execArgs(self.identifier, cmd.split(" "))
+            r = subprocess.run(args)
             log.info(f"\"{cmd}\" -> {r.returncode}")
 
     def deploy(self: "Runner"):
@@ -126,7 +129,8 @@ class Runner:
 
     def cleanup(self: "Runner"):
         # Clean resources allocated to runner
-        r = subprocess.run(["docker", "rm", "-f", self.identifier])
+        args = self.backend.cleanupArgs(self.identifier)
+        r = subprocess.run(args)
         log.debug(f"\"{r.args}\" -> {r.returncode}")
         self.identifier = None
 
@@ -139,7 +143,8 @@ def main():
         log.error("Wrong tool usage! Exiting...")
         sys.exit(-1)
     c = Config.load(path=sys.argv[-1])
-    r = Runner(c)
+    b = DockerBackend()
+    r = Runner(c, b)
     r.run()
 
 
