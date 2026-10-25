@@ -41,13 +41,13 @@ class Config:
 
     def load(path: str) -> "Config":
         with open(path, "r") as file:
-            data: dict = yaml.load(file, Loader=yaml.CLoader)
+            data: dict = yaml.safe_load(file)
         result = Config()
         result.image = data.get("image")
-        result.env = data.get("env")
-        result.setup = data.get("setup")
-        result.install = data.get("install")
-        result.test = data.get("test")
+        result.env = data.get("env", {})
+        result.setup = data.get("setup", [])
+        result.install = data.get("install", [])
+        result.test = data.get("test", [])
         result.deploy = data.get("deploy")
         result.notify = data.get("notify")
         return result
@@ -98,7 +98,7 @@ class Runner:
         # Run setup scripts inside created instance
         # NOTE: superuser
         for cmd in self.config.setup:
-            args = self.backend.execArgs(self.identifier, cmd.split(" "))
+            args = self.backend.execArgs(self.identifier, cmd.split(" "), False)
             r = subprocess.run(args)
             log.info(f"\"{cmd}\" -> {r.returncode}")
 
@@ -144,7 +144,10 @@ def main():
     # TODO: execution steps termination
     if (len(sys.argv) != 2):
         log.error("Wrong tool usage! Exiting...")
-        sys.exit(-1)
+        sys.exit(1)
+    if (sys.argv[-1] == "--version"):
+        log.info("0.0.0-alpha")
+        sys.exit(0)
     c = Config.load(path=sys.argv[-1])
     b = DockerBackend()
     r = Runner(c, b)

@@ -16,7 +16,7 @@ install:
 
 # Actual test scripts
 test:
-  - python3 main.py
+  - python3 main.py --version
 
 # Deploy the application
 deploy:
