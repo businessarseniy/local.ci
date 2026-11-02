@@ -7,6 +7,7 @@
 
 import logging
 import sys
+from importlib.metadata import version
 
 from backend import BaseBackend, DockerBackend
 from config import BaseConfig, YamlConfig
@@ -25,7 +26,7 @@ def main():
         log.error("Wrong tool usage! Exiting...")
         sys.exit(1)
     if (sys.argv[-1] == "--version"):
-        log.info("0.0.0-alpha")
+        log.info(version("local-ci"))
         sys.exit(0)
     c = YamlConfig.load(path=sys.argv[-1])
     b = DockerBackend()
