@@ -1,22 +1,23 @@
 # Define running environment
 image: "python:3.12-slim"
 env:
-  KEY: VALUE
+  values:
+    KEY: VALUE
 
 # Before any execution (system setup)
 setup:
-  - apt-get update
-  - apt install -y make
+  - run: apt-get update
+  - run: apt install -y make
 
 # Project installs (requirements and other stuff,
 # ran under unprivilliged user)
 install:
-  - make
-  - make install
+  - run: make
+  - run: make install
 
 # Actual test scripts
 test:
-  - python3 main.py --version
+  - run: python3 main.py --version
 
 # Deploy the application
 deploy:

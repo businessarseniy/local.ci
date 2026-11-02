@@ -1,5 +1,5 @@
 build:
-	pip install pyyaml
+	pip install pyyaml pydantic
 	chmod u+x main.py
 
 install:
