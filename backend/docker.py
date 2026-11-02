@@ -1,29 +1,30 @@
 import os
+from typing import Literal
 
+from config.schema import EnvModel, StepModel
 from .base import BaseBackend
 
 
 # TODO: implement docker backend
 class DockerBackend(BaseBackend):
-    def bootstrapArgs(self: "DockerBackend", image: str, env: dict, identifier: str) -> list[str]:
+    def bootstrapArgs(self: "DockerBackend", image: str, env: EnvModel, identifier: str) -> list[str]:
         args = []
         pwd = os.getcwd()
         args = ["docker", "run", "-d", "-v", f"{pwd}:/workspace", "-w", "/workspace", "--name", identifier]
-        for key in env:
+        for key, val in env.view().items():
             args.append("-e")
-            args.append("{}={}".format(key, env.get(key)))
+            args.append("{}={}".format(key, val))
         args.extend(["--entrypoint", "tail"])
         args.append(image)
         args.extend(["-f", "/dev/null"])
         return args
 
-    def execArgs(self: "DockerBackend", identifier: str, cmd: list[str], is_user: bool = True) -> list[str]:
+    def execArgs(self: "DockerBackend", identifier: str, step: StepModel, role: Literal["user", "root"] = "user") -> list[str]:
         args = ["docker", "exec"]
-        if (is_user):
-            # Use host system uid:gid map?
-            args.extend(["-u", "1000:1000", "-e", "HOME=/tmp"])
+        if (role == "user"):
+            args.extend(["-u", f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp"])
         args.append(identifier)
-        args.extend(cmd)
+        args.extend(step.view())
         return args
 
     def cleanupArgs(self: "DockerBackend", identifier: str) -> list[str]:
