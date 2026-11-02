@@ -1,20 +1,21 @@
 # Define running environment
 image: "alpine:latest"
 env:
-  KEY: VALUE
+  values:
+    KEY: VALUE
 
 # Before any execution (system setup)
 setup:
-  - echo SETUP STAGE
+  - run: echo SETUP STAGE
 
 # Project installs (requirements and other stuff,
 # ran under unprivilliged user)
 install:
-  - echo INSTALL STAGE
+  - run: echo INSTALL STAGE
 
 # Actual test scripts
 test:
-  - echo TEST STAGE
+  - run: echo TEST STAGE
 
 # Deploy the application
 deploy:
