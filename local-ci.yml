@@ -1,31 +1,23 @@
-# Define running environment
 image: "python:3.12-slim"
 env:
-  values:
-    KEY: VALUE
+  values: {}
 
-# Before any execution (system setup)
+# Using setup as root user global installation
+# as trick. Can't find any solution for abscent
+# HOME directory for current user and PATH not
+# not containing user's installs
 setup:
-  - run: apt-get update
-  - run: apt install -y make
+  - name: Install tool package
+    run: pip install .[test]
 
-# Project installs (requirements and other stuff,
-# ran under unprivilliged user)
-install:
-  - run: make
-  - run: make install
+install: []
 
-# Actual test scripts
 test:
-  - run: python3 main.py --version
-
-# Deploy the application
-deploy:
-  provider: localhost
-  secret:
-    KEY: VALUE
-  branch: master
-
-# Notify codeowners for results
-notify:
-  email: ...
+  - name: Installed package
+    run: bash -c "pip list | grep local-ci"
+  - name: Tool entrypoint
+    run: ./main.py --version
+  - name: Global tool entrypoint
+    run: local-ci --version
+  - name: Unit-tests
+    run: pytest -q .
