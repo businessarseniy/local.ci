@@ -1,0 +1,14 @@
+[project]
+name = "local-ci"
+version = "0.1.0"
+description = "Tool for running local CI jobs"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml",
+    "pydantic",
+]
+
+[tool.setuptools]
+packages = ["backend", "config"]
+py-modules = ["main"]
