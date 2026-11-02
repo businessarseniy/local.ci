@@ -5,137 +5,16 @@
 # Copyright (c) 2026 @businessarseniy
 
 
-import yaml
-import subprocess
-import uuid
 import logging
 import sys
 
 from backend import BaseBackend, DockerBackend
+from config import BaseConfig, YamlConfig
+from core import BaseRunner, Runner
 
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("local.ci")
-
-
-class Config:
-
-    class _Deploy:
-        provider: str
-        secret: dict[str, str]
-        branch: str
-
-    class _Image(str):...
-    class _Env(dict[str, str]):...
-    class _Script(str):...
-    class _Stage(list[_Script]):...
-    class _Notify(dict):...
-
-    image: _Image
-    env: _Env
-    setup: _Stage
-    install: _Stage
-    test: _Stage
-    deploy: _Deploy
-    notify: _Notify
-
-    def load(path: str) -> "Config":
-        with open(path, "r") as file:
-            data: dict = yaml.safe_load(file)
-        result = Config()
-        result.image = data.get("image")
-        result.env = data.get("env", {})
-        result.setup = data.get("setup", [])
-        result.install = data.get("install", [])
-        result.test = data.get("test", [])
-        result.deploy = data.get("deploy")
-        result.notify = data.get("notify")
-        return result
-
-    def __repr__(self: "Config"):
-        return "<CI Config>: {}".format(str(self.__dict__))
-
-
-class Runner:
-
-    class _Result():...
-    class _Id(str):...
-
-    config: Config
-    backend: BaseBackend
-    identifier: _Id
-
-    def __init__(self: "Runner", config: Config, backend: BaseBackend):
-        self.config = config
-        self.backend = backend
-    
-    def __enter__(self: "Runner"):
-        self.bootstrap()
-        self.setup()
-
-    def __exit__(self: "Runner", exc_type, exc, tb):
-        self.cleanup()
-
-    def run(self: "Runner"):
-        with self:
-            self.install()
-            self.test()
-            self.deploy()
-            self.notify()
-
-    def bootstrap(self: "Runner"):
-        # Setup a VM or Docker image defined in config
-        # NOTE: superuser
-        identifier = f"ci_runner_{uuid.uuid4().hex}"
-        image = self.config.image
-        env = self.config.env
-        args = self.backend.bootstrapArgs(image, env, identifier)
-        r = subprocess.run(args)
-        self.identifier = identifier
-        log.debug(f"Starting docker container with {r.args} -> {r.returncode}")
-    
-    def setup(self: "Runner"):
-        # Run setup scripts inside created instance
-        # NOTE: superuser
-        for cmd in self.config.setup:
-            args = self.backend.execArgs(self.identifier, cmd.split(" "), False)
-            r = subprocess.run(args)
-            log.info(f"\"{cmd}\" -> {r.returncode}")
-
-    def install(self: "Runner"):
-        # Run project related requirements
-        # NOTE: regular user
-        for cmd in self.config.install:
-            args = self.backend.execArgs(self.identifier, cmd.split(" "))
-            r = subprocess.run(args)
-            log.info(f"\"{cmd}\" -> {r.returncode}")
-
-    def test(self: "Runner"):
-        # Run test scriplets
-        # NOTE: regular user
-        for cmd in self.config.test:
-            args = self.backend.execArgs(self.identifier, cmd.split(" "))
-            r = subprocess.run(args)
-            log.info(f"\"{cmd}\" -> {r.returncode}")
-
-    def deploy(self: "Runner"):
-        # TODO
-        # Run deploy scripts
-        # NOTE: regular user
-        pass
-
-    def notify(self: "Runner"):
-        # TODO
-        # Run notifications
-        # NOTE: regular user
-        pass
-
-    def cleanup(self: "Runner"):
-        # Clean resources allocated to runner
-        args = self.backend.cleanupArgs(self.identifier)
-        r = subprocess.run(args)
-        log.debug(f"\"{r.args}\" -> {r.returncode}")
-        self.identifier = None
 
 
 def main():
@@ -148,7 +27,7 @@ def main():
     if (sys.argv[-1] == "--version"):
         log.info("0.0.0-alpha")
         sys.exit(0)
-    c = Config.load(path=sys.argv[-1])
+    c = YamlConfig.load(path=sys.argv[-1])
     b = DockerBackend()
     r = Runner(c, b)
     r.run()
