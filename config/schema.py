@@ -1,3 +1,5 @@
+import shlex
+
 from pydantic import BaseModel, Field
 
 
@@ -14,9 +16,8 @@ class StepModel(BaseModel):
     name:       str                     = None          # Name of step for UX
     run:        str                     = Field(...)    # Required shell command for step
 
-    # TODO: resolve cmd to list of str
     def view(self: "StepModel") -> list[str]:
-        return self.run.split(" ")
+        return shlex.split(self.run) # preserve quoted
 
 
 class DeployModel(BaseModel):
