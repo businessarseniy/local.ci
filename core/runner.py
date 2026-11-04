@@ -1,14 +1,18 @@
 import uuid
 import subprocess
 import logging
+from abc import ABC, abstractmethod
 
 from backend import BaseBackend
 from config import BaseConfig
-from .base import BaseRunner
 
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("local.ci/runner")
+
+
+class BaseRunner(ABC):
+    pass
 
 
 class Runner(BaseRunner):
