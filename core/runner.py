@@ -1,10 +1,9 @@
-import uuid
-import subprocess
 import logging
 from abc import ABC, abstractmethod
 
 from backend import BaseBackend
 from config import BaseConfig
+from share.types import Result, Ok, Err
 
 
 logging.basicConfig(level=logging.INFO)
@@ -19,82 +18,113 @@ class Runner(BaseRunner):
 
     config: BaseConfig
     backend: BaseBackend
-    identifier: str
 
     def __init__(self: "Runner", config: BaseConfig, backend: BaseBackend):
         self.config = config
         self.backend = backend
-    
-    def __enter__(self: "Runner"):
-        self.bootstrap()
-        self.setup()
-
-    def __exit__(self: "Runner", exc_type, exc, tb):
-        self.cleanup()
 
     # TODO: rewrite with error handling, instead of
     # some weird `with` block
     def run(self: "Runner"):
-        with self:
-            self.install()
-            self.test()
-            self.deploy()
-            self.notify()
+        try:
+            match self.bootstrap():
+                case Err(e): raise e
+            match self.setup():
+                case Err(e): raise e
+            match self.install():
+                case Err(e): raise e
+            match self.test():
+                case Err(e): raise e
+            match self.deploy():
+                case Err(e): raise e
+            match self.notify():
+                case Err(e): raise e
+        except Exception as e:
+            log.error("Error during runner execution: %s", e)
+        finally:
+            _ = self.cleanup()
 
-    def bootstrap(self: "Runner"):
+
+    def bootstrap(self: "Runner") -> Result:
         # Setup a VM or Docker image defined in config
         # NOTE: superuser
         config_view = self.config.view()
-        identifier = f"ci_runner_{uuid.uuid4().hex}"
         image = config_view.image
         env = config_view.env
-        args = self.backend.bootstrapArgs(image, env, identifier)
-        r = subprocess.run(args)
-        self.identifier = identifier
-        log.debug(f"Starting docker container with {r.args} -> {r.returncode}")
+        result = self.backend.bootstrap(image, env)
+        match result:
+            case Ok(r): log.debug(f"Starting docker container with {r.args} -> {r.returncode}")
+            case Err(e):
+                log.error("Error during bootstrap: %s", e)
+                return result
+        return Ok(())
     
-    def setup(self: "Runner"):
+    def setup(self: "Runner") -> Result:
         # Run setup scripts inside created instance
         # NOTE: superuser
         config_view = self.config.view()
+        if config_view.setup is None:
+            log.info("Nothing to do for setup")
+            return Ok(())
         for step in config_view.setup:
-            args = self.backend.execArgs(self.identifier, step, "root")
-            r = subprocess.run(args)
-            log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+            result = self.backend.exec(step, "root")
+            match result:
+                case Ok(r): log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+                case Err(e):
+                    log.error("Error during setup: %s", e)
+                    return result
+        return Ok(())
 
-    def install(self: "Runner"):
+    def install(self: "Runner") -> Result:
         # Run project related requirements
         # NOTE: regular user
         config_view = self.config.view()
+        if config_view.install is None:
+            log.info("Nothing to do for install")
+            return Ok(())
         for step in config_view.install:
-            args = self.backend.execArgs(self.identifier, step, "user")
-            r = subprocess.run(args)
-            log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+            result = self.backend.exec(step, "user")
+            match result:
+                case Ok(r): log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+                case Err(e):
+                    log.error("Error during setup: %s", e)
+                    return result
+        return Ok(())
 
-    def test(self: "Runner"):
+    def test(self: "Runner") -> Result:
         # Run test scriplets
         # NOTE: regular user
         config_view = self.config.view()
+        if config_view.test is None:
+            log.error("Error during test: no tests!")
+            return Err("No tests")
         for step in config_view.test:
-            args = self.backend.execArgs(self.identifier, step, "user")
-            r = subprocess.run(args)
-            log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+            result = self.backend.exec(step, "user")
+            match result:
+                case Ok(r): log.info(f"\"{step.name or step.run}\" -> {r.returncode}")
+                case Err(e):
+                    log.error("Error during test: %s", e)
+                    return result
+        return Ok(())
 
-    def deploy(self: "Runner"):
+    def deploy(self: "Runner") -> Result:
         # TODO
         # Run deploy scripts
         # NOTE: regular user
-        pass
+        return Ok(())
 
-    def notify(self: "Runner"):
+    def notify(self: "Runner") -> Result:
         # TODO
         # Run notifications
         # NOTE: regular user
-        pass
+        return Ok(())
 
-    def cleanup(self: "Runner"):
+    def cleanup(self: "Runner") -> Result:
         # Clean resources allocated to runner
-        args = self.backend.cleanupArgs(self.identifier)
-        r = subprocess.run(args)
-        log.debug(f"\"{r.args}\" -> {r.returncode}")
-        self.identifier = None
+        result = self.backend.cleanup()
+        match result:
+            case Ok(r): log.debug(f"\"{r.args}\" -> {r.returncode}")
+            case Err(e):
+                log.error("Error during cleanup: %s", e)
+                return result
+        return Ok(())
