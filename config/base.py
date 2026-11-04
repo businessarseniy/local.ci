@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from share.types import Result
 from .schema import ConfigModel
 
 
@@ -7,7 +8,7 @@ class BaseConfig(ABC):
 
     @staticmethod
     @abstractmethod
-    def load(path: str) -> "BaseConfig":
+    def load(path: str) -> Result["BaseConfig"]:
         pass
 
     @abstractmethod
