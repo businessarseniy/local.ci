@@ -6,7 +6,7 @@ You just need to define ci config and run.
 ## Requirements
 
 - Make
-- Python 3.12 (I think?)
+- Python 3.13
 - Docker
 
 ## Installation
