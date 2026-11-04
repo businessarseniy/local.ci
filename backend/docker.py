@@ -1,12 +1,56 @@
 import os
+import subprocess
+import uuid
 from typing import Literal
 
 from config.schema import EnvModel, StepModel
+from share.types import Result, Ok, Err
 from .base import BaseBackend
 
 
-# TODO: implement docker backend
+BASE_IDENTIFIER = "local-ci_"
+
+
+# TODO: capture output, check, timeout
 class DockerBackend(BaseBackend):
+
+    # state: current isolated environment identifier
+    identifier: str
+
+    @staticmethod
+    def generate_identifier() -> str:
+        return BASE_IDENTIFIER + uuid.uuid4().hex[:6]
+
+    def bootstrap(self: "DockerBackend", image: str, env: EnvModel) -> Result:
+        try:
+            identifier = DockerBackend.generate_identifier()
+            arguments = self.bootstrapArgs(image, env, identifier)
+            r = subprocess.run(arguments)
+            self.identifier = identifier
+            return Ok(r)
+        except Exception as e:
+            return Err(e)
+
+    def exec(self: "DockerBackend", step: StepModel, role: Literal["user", "root"]) -> Result:
+        try:
+            identifier = self.identifier
+            arguments = self.execArgs(identifier, step, role)
+            r = subprocess.run(arguments)
+            return Ok(r)
+        except Exception as e:
+            return Err(e)
+
+    def cleanup(self: "DockerBackend") -> Result:
+        try:
+            identifier = self.identifier
+            arguments = self.cleanupArgs(identifier)
+            r = subprocess.run(arguments)
+            return Ok(r)
+        except Exception as e:
+            return Err(e)
+        finally:
+            self.identifier = None
+
     def bootstrapArgs(self: "DockerBackend", image: str, env: EnvModel, identifier: str) -> list[str]:
         args = []
         pwd = os.getcwd()
