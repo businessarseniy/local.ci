@@ -1,4 +1,4 @@
-image: "python:3.12-slim"
+image: "python:3.13-slim"
 env:
   values: {}
 
@@ -20,4 +20,4 @@ test:
   - name: Global tool entrypoint
     run: local-ci --version
   - name: Unit-tests
-    run: pytest -q .
+    run: pytest -v .
