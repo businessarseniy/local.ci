@@ -55,9 +55,10 @@ class DockerBackend(BaseBackend):
         args = []
         pwd = os.getcwd()
         args = ["docker", "run", "-d", "-v", f"{pwd}:/workspace", "-w", "/workspace", "--name", identifier]
-        for key, val in env.view().items():
-            args.append("-e")
-            args.append("{}={}".format(key, val))
+        if (env and env.view()):
+            for key, val in env.view().items():
+                args.append("-e")
+                args.append("{}={}".format(key, val))
         args.extend(["--entrypoint", "tail"])
         args.append(image)
         args.extend(["-f", "/dev/null"])
