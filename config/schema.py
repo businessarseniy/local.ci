@@ -20,10 +20,12 @@ class StepModel(BaseModel):
         return shlex.split(self.run) # preserve quoted
 
 
+# TODO
 class DeployModel(BaseModel):
     pass
 
 
+# TODO
 class NotifyModel(BaseModel):
     pass
 
