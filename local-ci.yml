@@ -1,6 +1,4 @@
 image: "python:3.13-slim"
-env:
-  values: {}
 
 # Using setup as root user global installation
 # as trick. Can't find any solution for abscent
