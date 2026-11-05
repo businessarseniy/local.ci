@@ -22,10 +22,8 @@ test = [
 local-ci = "main:main"
 
 [tool.setuptools]
-packages = [
-    "backend",
-    "config",
-    "core",
-    "share",
-]
 py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["backend*", "config*", "core*", "share*"]
+exclude = ["*test_*", "**/test_*"]
