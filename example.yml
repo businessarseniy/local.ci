@@ -1,21 +1,30 @@
+# TODO unimplemented: env file resolving
+# TODO unimplemented: deploy
+# TODO unimplemented: notify
+
 # Define running environment
 image: "alpine:latest"
+
 env:
+  file: .env
   values:
     KEY: VALUE
 
-# Before any execution (system setup)
+# Before any execution (system setup, privelleged)
 setup:
-  - run: echo SETUP STAGE
+  - name: Setup
+    run: echo SETUP STAGE
 
 # Project installs (requirements and other stuff,
 # ran under unprivilliged user)
 install:
-  - run: echo INSTALL STAGE
+  - name: Install
+    run: echo INSTALL STAGE
 
-# Actual test scripts
+# Actual test scripts (unprivilliged user)
 test:
-  - run: echo TEST STAGE
+  - name: Test
+    run: echo TEST STAGE
 
 # Deploy the application
 deploy:
