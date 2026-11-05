@@ -3,7 +3,7 @@ from typing import Callable, Never
 
 
 @dataclass(frozen=True)
-class Ok[T]:
+class Ok[T, E]:
     value: T
 
     def is_ok(self: "Ok") -> bool: return True
@@ -19,12 +19,12 @@ class Ok[T]:
     def map[U](self: "Ok", func: Callable[[T], U]) -> "Ok[T]":
         return Ok(func(self.value))
 
-    def map_err[E, U](self: "Ok", func: Callable[[E], U]) -> "Ok[T]":
+    def map_err[U](self: "Ok", func: Callable[[E], U]) -> "Ok[T]":
         return self
 
 
 @dataclass(frozen=True)
-class Err[E]:
+class Err[T, E]:
     error: E
 
     def is_ok(self: "Err") -> bool: return False
@@ -35,14 +35,14 @@ class Err[E]:
         # panic
         raise self.error
 
-    def unwrap_or[T](self: "Err", default: T) -> T:
+    def unwrap_or(self: "Err", default: T) -> T:
         return default
 
-    def map[T, U](self: "Err", func: Callable[[T], U]) -> "Err[E]":
+    def map[U](self: "Err", func: Callable[[T], U]) -> "Err[E]":
         return self
 
     def map_err[U](self: "Err", func: Callable[[E], U]) -> "Err[U]":
         return Err(func(self.error))
 
 
-type Result[T, E = str] = Ok[T] | Err[E]
+type Result[T, E = str] = Ok[T, E] | Err[T, E]
